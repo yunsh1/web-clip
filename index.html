@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>공유 텍스트 메모 (GitHub Pages + Firebase)</title>
+  <title>공유 텍스트 메모</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
     .card { max-width: 760px; margin: 0 auto; padding: 1.5rem; border: 1px solid #ddd; border-radius: 14px; }
@@ -60,7 +60,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
     import {
-      getDatabase, ref, onValue, set, push, query, orderByChild, limitToLast, get
+      getDatabase, ref, onValue, set, push,
+      query, orderByChild, limitToLast, get, remove, child
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
 
     const firebaseConfig = {
@@ -106,9 +107,7 @@
       historyEl.innerHTML = "";
       if (!data) return;
 
-      // 객체 → 배열, ts 오름차순으로 정렬
       const arr = Object.values(data).sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
-
       for (const item of arr) {
         const li = document.createElement("li");
         const when = item.ts ? new Date(item.ts).toLocaleString() : "";
@@ -116,6 +115,22 @@
         historyEl.appendChild(li);
       }
     });
+
+    // 히스토리 최대 개수 유지(초과분 삭제)
+    async function pruneHistory(maxItems) {
+      const snap = await get(historyRef);
+      if (!snap.exists()) return;
+
+      const entries = Object.entries(snap.val())
+        .map(([k, v]) => [k, v ?? {}])
+        .sort((a, b) => (a[1].ts ?? 0) - (b[1].ts ?? 0)); // 오래된 순
+
+      const surplus = entries.length - maxItems;
+      if (surplus <= 0) return;
+
+      const toDelete = entries.slice(0, surplus).map(([key]) => key);
+      await Promise.all(toDelete.map((key) => remove(child(historyRef, key))));
+    }
 
     // 저장
     async function save() {
@@ -129,6 +144,9 @@
 
         // 2) 히스토리에 추가
         await push(historyRef, { text: newVal, ts: Date.now() });
+
+        // 3) 히스토리 정리(최대 1000개 유지)
+        await pruneHistory(1000);
 
         statusEl.textContent = "저장 완료";
       } catch (e) {
