@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>공유 텍스트 메모 (GitHub Pages + Firebase)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    .card { max-width: 640px; margin: 0 auto; padding: 1.5rem; border: 1px solid #ddd; border-radius: 14px; }
+    h1 { margin: 0 0 1rem; font-size: 1.25rem; }
+    .row { display: flex; gap: .5rem; }
+    input[type="text"] { flex: 1; padding: .75rem 1rem; border: 1px solid #ccc; border-radius: 10px; }
+    button { padding: .75rem 1rem; border: 0; border-radius: 10px; cursor: pointer; }
+    button#saveBtn { background: #111; color: #fff; }
+    .muted { color: #666; font-size: .9rem; margin-top: .75rem; }
+    .output { margin-top: 1rem; padding: 1rem; background: #fafafa; border: 1px dashed #ccc; border-radius: 10px; min-height: 2.5rem; white-space: pre-wrap; }
+    .status { margin-top: .5rem; font-size: .85rem; color: #0a7; }
+    .error  { color: #c00; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>공유 텍스트 메모</h1>
+    <div class="row">
+      <input id="textInput" type="text" placeholder="여기에 텍스트 입력…" />
+      <button id="saveBtn" type="button">확인</button>
+    </div>
+    <div class="muted">아래 값은 누가 접속해도 동일하게 보입니다.</div>
+    <div class="output" id="display">(로딩 중…)</div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- Firebase (ES modules via CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCwC-9JyTSzkqrhhBvQPCDlq5-Hukbry8U",
+      authDomain: "clip-real-data.firebaseapp.com",
+      databaseURL: "https://clip-real-data-default-rtdb.firebaseio.com",
+      projectId: "clip-real-data",
+      storageBucket: "clip-real-data.firebasestorage.app",
+      messagingSenderId: "425461634460",
+      appId: "1:425461634460:web:5ba5ca6cf2932668c42459"
+    };
+
+    // Firebase 초기화
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    // 모든 사용자가 공유하는 단일 키 경로
+    const valueRef = ref(db, "shared/value");
+
+    const inputEl   = document.getElementById("textInput");
+    const displayEl = document.getElementById("display");
+    const statusEl  = document.getElementById("status");
+    const saveBtn   = document.getElementById("saveBtn");
+
+    // 실시간으로 값 반영 (다른 사람이 바꿔도 바로 업데이트)
+    onValue(valueRef, (snap) => {
+      const val = snap.val();
+      displayEl.textContent = (val ?? "").toString();
+      statusEl.textContent = "동기화 완료";
+      statusEl.classList.remove("error");
+    }, (err) => {
+      statusEl.textContent = "읽기 오류: " + err.message;
+      statusEl.classList.add("error");
+    });
+
+    // 저장 버튼
+    saveBtn.addEventListener("click", async () => {
+      const newVal = inputEl.value ?? "";
+      statusEl.textContent = "저장 중…";
+      statusEl.classList.remove("error");
+      try {
+        await set(valueRef, newVal);
+        statusEl.textContent = "저장 완료";
+      } catch (e) {
+        statusEl.textContent = "저장 오류: " + e.message;
+        statusEl.classList.add("error");
+      }
+    });
+
+    // 엔터키로도 저장
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveBtn.click();
+    });
+  </script>
+</body>
+</html>
