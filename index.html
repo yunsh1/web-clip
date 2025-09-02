@@ -135,8 +135,7 @@
 
     // 클립보드 저장
     const copyBtn = document.getElementById("copyBtn");
-    const displayEl = document.getElementById("display");
-    
+
     copyBtn.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(displayEl.textContent);
