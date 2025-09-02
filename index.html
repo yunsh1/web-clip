@@ -22,11 +22,11 @@
   <div class="card">
     <h1>공유 텍스트 메모</h1>
     <div class="row">
-      <input id="textInput" type="text" placeholder="여기에 텍스트 입력…" />
+      <textarea id="textInput" placeholder="여기에 여러 줄 텍스트 입력…" rows="6"></textarea>
       <button id="saveBtn" type="button">확인</button>
     </div>
     <div class="muted">아래 값은 누가 접속해도 동일하게 보입니다.</div>
-    <div class="output" id="display">(로딩 중…)</div>
+    <div class="output" id="display" style="white-space: pre-wrap">(로딩 중…)</div>
     <div class="status" id="status"></div>
   </div>
 
