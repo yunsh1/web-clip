@@ -46,6 +46,7 @@
 
     <div class="section">
       <div class="muted">현재 값</div>
+      <button id="copyBtn" type="button">복사</button>
       <div class="output" id="display">(로딩 중…)</div>
       <div class="status" id="status"></div>
     </div>
@@ -132,6 +133,19 @@
       await Promise.all(toDelete.map((key) => remove(child(historyRef, key))));
     }
 
+    // 클립보드 저장
+    const copyBtn = document.getElementById("copyBtn");
+    const displayEl = document.getElementById("display");
+    
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(displayEl.textContent);
+        alert("복사되었습니다!");
+      } catch (e) {
+        alert("복사 실패: " + e.message);
+      }
+    });
+    
     // 저장
     async function save() {
       const newVal = inputEl.value ?? "";
