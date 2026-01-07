@@ -65,6 +65,12 @@
       query, orderByChild, limitToLast, get, remove, child
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
 
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCwC-9JyTSzkqrhhBvQPCDlq5-Hukbry8U",
       authDomain: "clip-real-data.firebaseapp.com",
@@ -79,6 +85,10 @@
     const app = initializeApp(firebaseConfig);
     const db  = getDatabase(app);
 
+    
+    // Auth init
+    const auth = getAuth(app);
+
     // 경로
     const valueRef   = ref(db, "shared/value");    // 단일 현재값
     const historyRef = ref(db, "shared/history");  // 누적 히스토리
@@ -90,6 +100,63 @@
     const saveBtn   = document.getElementById("saveBtn");
     const historyEl = document.getElementById("history");
 
+
+// 기본 UI 잠금 (로그인 전엔 숨기거나 비활성화)
+function lockUI(msg) {
+  inputEl.disabled = true;
+  saveBtn.disabled = true;
+  statusEl.textContent = msg;
+  statusEl.classList.remove("error");
+  displayEl.textContent = "";
+  historyEl.innerHTML = "";
+}
+function unlockUI() {
+  inputEl.disabled = false;
+  saveBtn.disabled = false;
+}
+
+// 로그인 요구
+lockUI("접근 코드 확인 중…");
+
+async function requireLogin() {
+  // 이미 로그인 되어있으면 스킵
+  if (auth.currentUser) return;
+
+  const code = prompt("접근 코드 입력:");
+  if (!code) {
+    lockUI("접근 코드가 필요합니다.");
+    throw new Error("No code");
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, LOGIN_EMAIL, code);
+  } catch (e) {
+    lockUI("접근 코드가 올바르지 않습니다.");
+    statusEl.classList.add("error");
+    throw e;
+  }
+}
+
+// 로그인 상태 확인 후에만 DB 리스너 연결
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    try {
+      await requireLogin();
+      return; // requireLogin 성공하면 auth state가 다시 들어옴
+    } catch {
+      return;
+    }
+  }
+
+  // 여기부터는 로그인 성공
+  unlockUI();
+  statusEl.textContent = "인증 완료";
+  statusEl.classList.remove("error");
+
+  const valueRef   = ref(db, "shared/value");
+  const historyRef = ref(db, "shared/history");
+
+    
     // 현재값 실시간 반영
     onValue(valueRef, (snap) => {
       const val = snap.val();
